@@ -40,9 +40,9 @@ def getPost():
 def addPost():
     user_id = request.json['userId']
     post = request.json['post']
-    r_name = request.json['name']
-    title = request.json['title']
+    r_name = request.json['username']
     post_id = str(uuid.uuid4())
+
     posts[r_name] = {}
     posts[r_name][post_id] = {}
     posts[r_name][post_id]['userId'] = user_id
@@ -53,15 +53,21 @@ def addPost():
 @app.route('/register', methods=['POST'])
 def register():
     id = uuid.uuid4()
+    username = request.json['username']
     r_name = request.json['name']
     r_email = request.json['email']
     r_password = request.json['password']
-    users[r_name] = {}
-    users[r_name]["id"] = id
-    users[r_name]["email"] = r_email
-    users[r_name]["password"] = generate_password_hash(r_password)
+
+    if username in users:
+        return {"msg": "pick another username"}
+
+    users[username] = {}
+    users[username]["name"] = r_name
+    users[username]["id"] = id
+    users[username]["email"] = r_email
+    users[username]["password"] = generate_password_hash(r_password)
     # return user without password
-    return users[r_name]
+    return users[username]
 
 
 @app.route('/login', methods=['POST'])
