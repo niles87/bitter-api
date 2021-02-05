@@ -20,24 +20,16 @@ PORT = os.getenv('PORT')
 
 posts = {}
 users = {}
+comments = {}
 
 
 @app.route('/posts', methods=['GET'])
-def allPosts():
+def all_bits():
     return posts
 
 
-@app.route('/post')
-def getPost():
-    user = request.args['user']
-    post_id = request.args['postid']
-    return '''
-            <h1>user is {}</h1>
-            <h1>post is {}</h1>'''.format(user, post_id)
-
-
 @app.route('/posts', methods=['POST'])
-def addPost():
+def add_bit():
     user_id = request.json['userId']
     post = request.json['post']
     r_name = request.json['username']
@@ -50,6 +42,21 @@ def addPost():
     return posts[r_name][post_id]
 
 
+@app.route('/post')  # http://localhost:PORT/post?user=username&postid=xzy123
+def get_bit():
+    user = request.args.get('user')
+    post_id = request.args.get('postid')
+
+    if user is not None and post_id is not None:
+        if post_id in posts[user]:
+            return posts[user][post_id]
+        else:
+            return {"msg": "post does not exist"}
+    else:
+        return {"msg": "missing param args"}
+
+
+# User routes
 @app.route('/register', methods=['POST'])
 def register():
     id = uuid.uuid4()
@@ -66,7 +73,7 @@ def register():
     users[username]["id"] = id
     users[username]["email"] = r_email
     users[username]["password"] = generate_password_hash(r_password)
-    # return user without password
+    # todo return user without password
     return users[username]
 
 
@@ -75,7 +82,7 @@ def login():
     r_name = request.json['name']
     r_password = request.json['password']
     if check_password_hash(users[r_name]['password'], r_password):
-        # return user without password
+        # todo return user without password
         return users[r_name]
     else:
         return {}, 401
@@ -83,7 +90,17 @@ def login():
 
 @app.route('/allUsers', methods=['GET'])
 def allUsers():
+    # todo return users without passwords
     return users
+
+
+@app.route('/users', methods=['GET'])
+def query_user_posts():
+    username = request.args.get('user')
+    if username in posts:
+        return posts[username]
+    else:
+        return {"msg": "user does not exist"}, 400
 
 
 if __name__ == "__main__":
