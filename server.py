@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, Response
+from flask import Flask, request, Response, jsonify
 import firebase_admin
 from firebase_admin import credentials, db
 from dotenv import load_dotenv, find_dotenv
@@ -35,8 +35,12 @@ def add_bit():
     r_name = request.json['username']
     post_id = str(uuid.uuid4())
 
-    posts[r_name] = {}
-    posts[r_name][post_id] = {}
+    if r_name in posts:
+        posts[r_name][post_id] = {}
+    else:
+        posts[r_name] = {}
+        posts[r_name][post_id] = {}
+
     posts[r_name][post_id]['userId'] = user_id
     posts[r_name][post_id]['post'] = post
     return posts[r_name][post_id]
@@ -59,21 +63,24 @@ def get_bit():
 # Comments
 @app.route('/<username>/<post_id>/comment', methods=['POST'])
 def addComment(username, post_id):
-    comment = request.json('comment')
+    comment = request.json['comment']
+    c_user = request.json['username']
 
     if comment is None:
         return {"msg": "Need a comment"}, 400
 
+    comment_obj = {"comment": comment, "username": c_user}
+
     if username in comments:
         if post_id in comments[username]:
-            comments[username][post_id].insert(0, comment)
+            comments[username][post_id].insert(0, comment_obj)
         else:
-            comments[username][post_id] = [comment]
+            comments[username][post_id] = [comment_obj]
     else:
         comments[username] = {}
-        comments[username][post_id] = [comment]
+        comments[username][post_id] = [comment_obj]
 
-    return comments[username][post_id]
+    return jsonify(comments[username][post_id])
 
 
 # User routes
