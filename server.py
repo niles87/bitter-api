@@ -9,17 +9,20 @@ import uuid
 
 load_dotenv(find_dotenv())
 
-# cred = credentials.Certificate(os.getenv("GOOGLE_CREDENTIALS"))
-# firebase_admin.initialize_app(cred, {
-#     'databaseURL': 'https://bitter-api-default-rtdb.firebaseio.com/'
-# })
+cred = credentials.Certificate(os.getenv("GOOGLE_CREDENTIALS"))
+db_url = os.getenv("DB_URL")
+firebase_admin.initialize_app(cred, {
+    'databaseURL': db_url
+})
 
 app = Flask(__name__)
 app.config.from_object('config.Development')
 PORT = os.getenv('PORT')
 
+db = firebase_admin.db.reference()
+
 posts = {}
-users = {}
+users = db.child("Users")
 comments = {}
 
 
@@ -86,22 +89,26 @@ def addComment(username, post_id):
 # User routes
 @app.route('/register', methods=['POST'])
 def register():
-    id = uuid.uuid4()
+    id = str(uuid.uuid4())
     username = request.json['username']
     r_name = request.json['name']
     r_email = request.json['email']
     r_password = request.json['password']
 
-    if username in users:
-        return {"msg": "pick another username"}
+    # if username in users:
+    #     return {"msg": "pick another username"}
+    new_user = {}
+    new_user[username] = {}
+    new_user[username]["name"] = r_name
+    new_user[username]["id"] = id
+    new_user[username]["email"] = r_email
+    new_user[username]["password"] = generate_password_hash(r_password)
 
-    users[username] = {}
-    users[username]["name"] = r_name
-    users[username]["id"] = id
-    users[username]["email"] = r_email
-    users[username]["password"] = generate_password_hash(r_password)
+    
+    user = users.push(new_user)
+    # print(user.Reference)
     # todo return user without password
-    return users[username]
+    return user
 
 
 @app.route('/login', methods=['POST'])
