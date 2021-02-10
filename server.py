@@ -19,10 +19,10 @@ app = Flask(__name__)
 app.config.from_object('config.Development')
 PORT = os.getenv('PORT')
 
-db = firebase_admin.db.reference()
+dbase = db.reference()
 
 posts = {}
-users = db.child("Users")
+users = dbase.child("Users")
 comments = {}
 
 
@@ -95,29 +95,34 @@ def register():
     r_email = request.json['email']
     r_password = request.json['password']
 
-    # if username in users:
-    #     return {"msg": "pick another username"}
-    new_user = {}
-    new_user[username] = {}
-    new_user[username]["name"] = r_name
-    new_user[username]["id"] = id
-    new_user[username]["email"] = r_email
-    new_user[username]["password"] = generate_password_hash(r_password)
-
+    existing_users = db.reference('Users').get()
     
-    user = users.push(new_user)
+    if username in existing_users:
+        return {"msg": "pick another username"}
+    
+    new_user = {}
+    new_user["name"] = r_name
+    new_user["id"] = id
+    new_user["email"] = r_email
+    new_user["password"] = generate_password_hash(r_password)
+
+    user = users.child(username).set(new_user)
     # print(user.Reference)
     # todo return user without password
-    return user
+    return new_user
 
 
 @app.route('/login', methods=['POST'])
 def login():
-    r_name = request.json['name']
+    r_name = request.json['username']
     r_password = request.json['password']
-    if check_password_hash(users[r_name]['password'], r_password):
+    username_str = 'Users/{}'.format(r_name)
+    print(username_str)
+    user = db.reference(username_str).get()
+    print(user)
+    if check_password_hash(user['password'], r_password):
         # todo return user without password
-        return users[r_name]
+        return user, 200
     else:
         return {}, 401
 
