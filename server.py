@@ -4,6 +4,7 @@ import firebase_admin
 from firebase_admin import credentials, db
 from dotenv import load_dotenv, find_dotenv
 from werkzeug.security import check_password_hash, generate_password_hash
+from time import time
 import uuid
 
 
@@ -21,37 +22,38 @@ PORT = os.getenv('PORT')
 
 dbase = db.reference()
 
-posts = {}
+posts = dbase.child("Posts")
 users = dbase.child("Users")
 comments = {}
 
 
 @app.route('/posts', methods=['GET'])
-def all_bits():
-    return posts
+def get_all_bits():
+    all_bits = db.reference("Posts").get()
+    return all_bits
 
 
 @app.route('/posts', methods=['POST'])
 def add_bit():
-    user_id = request.json['userId']
     post = request.json['post']
     r_name = request.json['username']
     post_id = str(uuid.uuid4())
+    timestamp = int(time() * 1000)
 
-    if r_name in posts:
-        posts[r_name][post_id] = {}
-    else:
-        posts[r_name] = {}
-        posts[r_name][post_id] = {}
+    new_bit = {}
+    new_bit['username'] = r_name
+    new_bit['post'] = post
+    new_bit['timestamp'] = timestamp
 
-    posts[r_name][post_id]['userId'] = user_id
-    posts[r_name][post_id]['post'] = post
-    return posts[r_name][post_id]
+    posts.child(post_id).set(new_bit)
+
+    bit = db.reference(f"Posts/{post_id}").get()
+    
+    return bit
 
 
-@app.route('/post')  # http://localhost:PORT/post?user=username&postid=xzy123
+@app.route('/post')  # http://localhost:PORT/post?postid=xzy123
 def get_bit():
-    user = request.args.get('user')
     post_id = request.args.get('postid')
 
     if user is not None and post_id is not None:
@@ -68,6 +70,7 @@ def get_bit():
 def addComment(username, post_id):
     comment = request.json['comment']
     c_user = request.json['username']
+    timestamp = int(time() * 1000)
 
     if comment is None:
         return {"msg": "Need a comment"}, 400
@@ -106,10 +109,11 @@ def register():
     new_user["email"] = r_email
     new_user["password"] = generate_password_hash(r_password)
 
-    user = users.child(username).set(new_user)
-    # print(user.Reference)
+    users.child(username).set(new_user)
+
+    r_user = db.reference(f"Users/{username}").get()
     # todo return user without password
-    return new_user
+    return r_user
 
 
 @app.route('/login', methods=['POST'])
@@ -117,9 +121,9 @@ def login():
     r_name = request.json['username']
     r_password = request.json['password']
     username_str = 'Users/{}'.format(r_name)
-    print(username_str)
+    
     user = db.reference(username_str).get()
-    print(user)
+
     if check_password_hash(user['password'], r_password):
         # todo return user without password
         return user, 200
