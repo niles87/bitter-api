@@ -22,72 +22,78 @@ PORT = os.getenv('PORT')
 
 dbase = db.reference()
 
-posts = dbase.child("Posts")
+bits = dbase.child("Bits")
 users = dbase.child("Users")
-comments = {}
+comments = dbase.child("Comments")
 
-
-@app.route('/posts', methods=['GET'])
-def get_all_bits():
-    all_bits = db.reference("Posts").get()
+def get_all():
+    all_bits = db.reference("Bits").get()
     return all_bits
 
 
-@app.route('/posts', methods=['POST'])
+@app.route('/bits', methods=['GET'])
+def get_all_bits():
+    all_bits = get_all()
+    return all_bits
+
+
+@app.route('/bits', methods=['POST'])
 def add_bit():
-    post = request.json['post']
+    bit = request.json['bit']
     r_name = request.json['username']
-    post_id = str(uuid.uuid4())
+    bit_id = str(uuid.uuid4())
     timestamp = int(time() * 1000)
 
     new_bit = {}
     new_bit['username'] = r_name
-    new_bit['post'] = post
+    new_bit['bit'] = bit
     new_bit['timestamp'] = timestamp
 
-    posts.child(post_id).set(new_bit)
+    bits.child(bit_id).set(new_bit)
 
-    bit = db.reference(f"Posts/{post_id}").get()
+    bit = db.reference(f"Bits/{bit_id}").get()
     
     return bit
 
 
-@app.route('/post')  # http://localhost:PORT/post?postid=xzy123
+@app.route('/bit')  # http://localhost:PORT/bits?bitid=xzy123
 def get_bit():
-    post_id = request.args.get('postid')
+    bit_id = request.args.get('bitid')
 
-    if user is not None and post_id is not None:
-        if post_id in posts[user]:
-            return posts[user][post_id]
+    all_bits = get_all()
+
+    if bit_id is not None:
+        if bit_id in all_bits:
+            return { bit_id: all_bits[bit_id]}
         else:
-            return {"msg": "post does not exist"}
+            return {"msg": "bit does not exist"}
     else:
         return {"msg": "missing param args"}
 
 
 # Comments
-@app.route('/<username>/<post_id>/comment', methods=['POST'])
-def addComment(username, post_id):
+@app.route('/bits/<username>/<bit_id>/comments', methods=['POST'])
+def add_comment(username, bit_id):
     comment = request.json['comment']
     c_user = request.json['username']
     timestamp = int(time() * 1000)
+    comment_id = str(uuid.uuid4())
 
     if comment is None:
         return {"msg": "Need a comment"}, 400
 
-    comment_obj = {"comment": comment, "username": c_user}
+    comment_obj = {"comment": comment, "username": c_user, "timestamp": timestamp}
 
-    if username in comments:
-        if post_id in comments[username]:
-            comments[username][post_id].insert(0, comment_obj)
-        else:
-            comments[username][post_id] = [comment_obj]
-    else:
-        comments[username] = {}
-        comments[username][post_id] = [comment_obj]
+    comments.child(bit_id).child(comment_id).set(comment_obj)
 
-    return jsonify(comments[username][post_id])
+    r_comment = db.reference(f"Comments/{bit_id}/{comment_id}").get()
+    return r_comment
 
+@app.route('/bits/<username>/<bit_id>/comments')
+def get_comments(username, bit_id):
+
+    all_comments = db.reference(f"Comments/{bit_id}").get()
+    return all_comments
 
 # User routes
 @app.route('/register', methods=['POST'])
@@ -132,16 +138,16 @@ def login():
 
 
 @app.route('/allUsers', methods=['GET'])
-def allUsers():
+def all_users():
     # todo return users without passwords
     return users
 
 
 @app.route('/users', methods=['GET'])
-def query_user_posts():
+def query_user_bits():
     username = request.args.get('user')
-    if username in posts:
-        return posts[username]
+    if username in bits:
+        return bits[username]
     else:
         return {"msg": "user does not exist"}, 400
 
