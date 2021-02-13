@@ -1,7 +1,6 @@
 import os
 from flask import Flask, request, Response, jsonify
-import firebase_admin
-from firebase_admin import credentials, db
+from firebase_admin import credentials, db, initialize_app
 from dotenv import load_dotenv, find_dotenv
 from werkzeug.security import check_password_hash, generate_password_hash
 from time import time
@@ -12,7 +11,7 @@ load_dotenv(find_dotenv())
 
 cred = credentials.Certificate(os.getenv("GOOGLE_CREDENTIALS"))
 db_url = os.getenv("DB_URL")
-firebase_admin.initialize_app(cred, {
+initialize_app(cred, {
     'databaseURL': db_url
 })
 
@@ -31,17 +30,21 @@ def get_all():
     return all_bits
 
 
-@app.route('/bits', methods=['GET'])
-def get_all_bits():
-    all_bits = get_all()
-    return all_bits
-
+@app.route('/bits') # http://localhost:4000/bits?user=xxx
+def get_bits():
+    username = request.args.get('user')
+    if username == None:
+        all_bits = get_all()
+        return all_bits
+    else:
+        all_bits = get_all()
+        return {}, 200
+    
 
 @app.route('/bits', methods=['POST'])
 def add_bit():
     bit = request.json['bit']
     r_name = request.json['username']
-    bit_id = str(uuid.uuid4())
     timestamp = int(time() * 1000)
 
     new_bit = {}
@@ -49,14 +52,13 @@ def add_bit():
     new_bit['bit'] = bit
     new_bit['timestamp'] = timestamp
 
-    bits.child(bit_id).set(new_bit)
+    new_bit_ref = bits.push()
+    new_bit_ref.set(new_bit)
+    key = new_bit_ref.key
+    return {key: new_bit}
 
-    bit = db.reference(f"Bits/{bit_id}").get()
-    
-    return bit
 
-
-@app.route('/bit')  # http://localhost:PORT/bits?bitid=xzy123
+@app.route('/bit')  # http://localhost:PORT/bit?bitid=xzy123
 def get_bit():
     bit_id = request.args.get('bitid')
 
@@ -141,15 +143,6 @@ def login():
 def all_users():
     # todo return users without passwords
     return users
-
-
-@app.route('/users', methods=['GET'])
-def query_user_bits():
-    username = request.args.get('user')
-    if username in bits:
-        return bits[username]
-    else:
-        return {"msg": "user does not exist"}, 400
 
 
 if __name__ == "__main__":
