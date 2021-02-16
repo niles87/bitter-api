@@ -32,7 +32,7 @@ def get_bits():
             all_bits = get_all()
         except FirebaseError:
             return {"msg": "Firebase error"}, 400
-        return all_bits
+        return {"data": all_bits}, 200
     else:
         try:
             all_bits = get_all()
@@ -42,7 +42,7 @@ def get_bits():
         for key, value in all_bits.items():
             if value['username'] == username:
                 bits_list.append({key: value})
-        return jsonify(bits_list)
+        return {"data": bits_list}, 200
     
 
 @app.route('/bits', methods=['POST'])
@@ -69,7 +69,7 @@ def add_bit():
         return {"msg": "Firebase error"}, 400
         
     key = new_bit_ref.key
-    return {key: new_bit}
+    return {"data":{ key: new_bit}}, 200
 
 
 @app.route('/bit')  # http://localhost:PORT/bit?bitid=xzy123
@@ -80,7 +80,7 @@ def get_bit():
 
     if bit_id is not None:
         if bit_id in all_bits:
-            return { bit_id: all_bits[bit_id]}
+            return {"data": {bit_id: all_bits[bit_id]}}
         else:
             return {"msg": "bit does not exist"}
     else:
@@ -110,7 +110,7 @@ def add_comment(username, bit_id):
 
     key = comment_ref.key
     
-    return {key: comment_obj}
+    return {"data": {key: comment_obj}}, 200
 
 @app.route('/bits/<username>/<bit_id>/comments')
 def get_comments(username, bit_id):
@@ -118,7 +118,7 @@ def get_comments(username, bit_id):
         all_comments = db.reference(f"Comments/{bit_id}").get()
     except FirebaseError:
         return {"msg": f"Failed to get comments for {bit_id}"}, 400
-    return all_comments
+    return {"data": all_comments}, 200
 
 # User routes
 @app.route('/register', methods=['POST'])
@@ -128,6 +128,8 @@ def register():
     r_name = request.json['name']
     r_email = request.json['email']
     r_password = request.json['password']
+    r_image = request.json['image']
+    friends = []
 
     try:
         existing_users = db.reference('Users').get()
@@ -141,6 +143,8 @@ def register():
     new_user["id"] = id
     new_user["email"] = r_email
     new_user["password"] = generate_password_hash(r_password)
+    new_user["friends"] = friends
+    new_user["image"] = r_image
 
     try:
         db.reference('Users').child(username).set(new_user)
@@ -167,9 +171,9 @@ def login():
                 "id": user['id'],
                 "name": user['name']
             }
-            return r_user, 200
+            return {"data": r_user}, 200
         else:
-            return {}, 401
+            return {"msg": "That password wasn't correct"}, 401
 
 
 @app.route('/all-users') 
@@ -186,7 +190,7 @@ def all_users():
             "id": details['id'],
             "name": details['name']
         }})
-    return jsonify(user_list)
+    return {"data": user_list}, 200
 
 
 if __name__ == "__main__":
