@@ -16,7 +16,7 @@ _mailinglist
 .idea/
 docs/_build/
 .vscode
-bitterv/
+venv/
 firebase-creds/
 __pycache__
 instance/
