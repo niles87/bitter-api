@@ -11,20 +11,11 @@ import uuid, json
 
 load_dotenv(find_dotenv())
 
-# cred = credentials.Certificate(os.getenv("GOOGLE_CREDENTIALS"))
-# initialize_app(cred, {
-#     'databaseURL': db_url
-# })
-
 app = Flask(__name__)
 app.config.from_object('config.Development')
 PORT = os.getenv('PORT')
 db_url = os.getenv("DB_URL")
 connect(host=db_url)
-
-def get_all():
-    # all_bits = db.reference("Bits").get()
-    return {}
 
 
 @app.route('/bits') # http://localhost:4000/bits?user=xxx
@@ -161,8 +152,9 @@ def login():
 
 @app.route('/all-users') 
 def all_users():
-    users = db.reference('Users')
-    return {}
+    users = User.objects.to_json()
+    # return without passwords
+    return jsonify({"data": json.loads(users)})
 
 
 if __name__ == "__main__":
