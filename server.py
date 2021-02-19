@@ -59,44 +59,33 @@ def get_bit():
             return {"msg": "Bit does not exist"}, 400
         else:
             user = User.objects(id=bit[0].author.id)
-            return {"data": {"bit": json.loads(bit[0].to_json()), "user": {"username": user[0].username, "email": user[0].email, "image": user[0].image}}}
+            return {"data": {"bit": json.loads(bit[0].to_json(use_db_field=False)), "user": {"username": user[0].username, "email": user[0].email, "image": user[0].image}}}
     else:
         return {"msg": "missing param args"}, 400
 
 
 # Comments
-@app.route('/bits/<username>/<bit_id>/comments', methods=['POST'])
-def add_comment(username, bit_id):
+@app.route('/bits/<bit_id>/comments', methods=['POST'])
+def add_comment(bit_id):
     comment = request.json['comment']
     c_user = request.json['username']
 
-    # if comment is None or comment == "":
-    #     return {"msg": "Need a comment"}, 400
-    # if c_user is None or c_user == "":
-    #     return {"msg": "Need a user"}, 400
+    if comment is None or comment == "":
+        return {"msg": "Need a comment"}, 400
+    if c_user is None or c_user == "":
+        return {"msg": "Need a user"}, 400
 
-    # comment_obj = {"comment": comment, "username": c_user, "timestamp": timestamp}
+    user = User.objects(username=c_user)
+    new_comment = Comment(comment=comment, author=user[0])
+    bit = Bit.objects(id=bit_id)
+    try:
+        bit[0].modify(push__comments=new_comment)
+        bit[0].reload()      
+    except:
+        return {"msg": "failed to save comment"}, 400
+    else:
+        return {"data": {"bit": json.loads(bit[0].to_json())}}
 
-    # comments = db.reference('Comments')
-    # try:
-    #     comment_ref = comments.child(bit_id).push()
-    #     comment_ref.set(comment_obj)
-    # except FirebaseError:
-    #     return {"msg": "Firebase error"}, 400
-
-    # key = comment_ref.key
-    
-    # return {"data": {key: comment_obj}}, 200
-    return {}
-
-@app.route('/bits/<username>/<bit_id>/comments')
-def get_comments(username, bit_id):
-    # try:
-    #     all_comments = db.reference(f"Comments/{bit_id}").get()
-    # except FirebaseError:
-    #     return {"msg": f"Failed to get comments for {bit_id}"}, 400
-    # return {"data": all_comments}, 200
-    return {}
 
 # User routes
 @app.route('/register', methods=['POST'])
@@ -106,7 +95,6 @@ def register():
     r_email = request.json['email']
     r_password = request.json['password']
     r_image = request.json['image']
-
 
     user = User.objects.filter(username=username)
     if user[0].username == username:
@@ -128,7 +116,6 @@ def register():
         return {"msg": "success"}, 201
 
 
-
 @app.route('/login', methods=['POST'])
 def login():
     r_name = request.json['username']
@@ -145,10 +132,15 @@ def login():
             return {"msg": "Not found"}, 400
 
 
-@app.route('/user') # http://localhost:4000/user?id=abc123
+@app.route('/user') # http://localhost:4000/user?user=abc123
 def get_user():
-    user_id = request.args.get("id")
-
+    user = request.args.get("user")
+    if user is None:
+        return {"msg": "Missing params"}
+    r_user = User.objects.filter(username=user)
+    bits = Bit.objects.filter(author=r_user[0].id)
+    return {"data": {"user": {"username": r_user[0].username, "email": r_user[0].email, "image": r_user[0].image}, "bits": json.loads(bits.to_json())}}
+    
 
 @app.route('/all-users') 
 def all_users():
