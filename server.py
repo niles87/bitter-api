@@ -1,11 +1,9 @@
 import os
 from flask import Flask, request, Response, jsonify
-# from firebase_admin import credentials, db, initialize_app
 from mongoengine import *
 from models import User, Bit, Comment
 from dotenv import load_dotenv, find_dotenv
 from werkzeug.security import check_password_hash, generate_password_hash
-from time import time
 import uuid, json
 
 
@@ -27,7 +25,7 @@ def get_bits():
     else:
         user = User.objects.filter(username=username)
         bits = Bit.objects.filter(author=user[0]).to_json()
-        return jsonify({"data": json.loads(bits)})
+        return {"data": {"user": json.loads(user[0].to_json()), "bits": json.loads(bits)}}
     
 
 @app.route('/bits', methods=['POST'])
@@ -55,16 +53,15 @@ def add_bit():
 def get_bit():
     bit_id = request.args.get('bitid')
 
-    # all_bits = get_all()
-
-    # if bit_id is not None:
-    #     if bit_id in all_bits:
-    #         return {"data": {bit_id: all_bits[bit_id]}}
-    #     else:
-    #         return {"msg": "bit does not exist"}
-    # else:
-    #     return {"msg": "missing param args"}
-    return {}
+    if bit_id is not None:
+        bit = Bit.objects(id=bit_id)
+        if bit is None:
+            return {"msg": "Bit does not exist"}, 400
+        else:
+            user = User.objects(id=bit[0].author.id)
+            return {"data": {"bit": json.loads(bit[0].to_json()), "user": {"username": user[0].username, "email": user[0].email, "image": user[0].image}}}
+    else:
+        return {"msg": "missing param args"}, 400
 
 
 # Comments
@@ -72,7 +69,6 @@ def get_bit():
 def add_comment(username, bit_id):
     comment = request.json['comment']
     c_user = request.json['username']
-    timestamp = int(time() * 1000)
 
     # if comment is None or comment == "":
     #     return {"msg": "Need a comment"}, 400
@@ -148,6 +144,10 @@ def login():
         else:
             return {"msg": "Not found"}, 400
 
+
+@app.route('/user') # http://localhost:4000/user?id=abc123
+def get_user():
+    user_id = request.args.get("id")
 
 
 @app.route('/all-users') 
