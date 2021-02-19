@@ -7,6 +7,7 @@ class User(Document):
     password = StringField(required=True)
     image = StringField(required=True)
     name = StringField(max_length=50, required=True)
+    profile_desc = StringField(max_length=200)
 
 
 class Comment(EmbeddedDocument):
