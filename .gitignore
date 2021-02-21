@@ -17,7 +17,7 @@ _mailinglist
 docs/_build/
 .vscode
 venv/
-firebase-creds/
+bitterv/
 __pycache__
 instance/
 # dev database
