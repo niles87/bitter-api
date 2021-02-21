@@ -12,12 +12,14 @@ class User(Document):
 
 class Comment(EmbeddedDocument):
     comment = StringField(required=True, max_length=150)
-    author = ReferenceField(User)
+    author = StringField(required=True)
+    author_image = StringField(required=True)
     date_time = DateTimeField(default=datetime.utcnow)
 
   
 class Bit(Document):
-    author = ReferenceField(User, reverse_delete_rule=CASCADE, required=True)
+    author = StringField(required=True)
+    author_image = StringField(required=True)
     bit = StringField(required=True, max_length=240)
     date_time = DateTimeField(default=datetime.utcnow)
     comments = ListField(EmbeddedDocumentField(Comment))
