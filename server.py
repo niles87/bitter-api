@@ -21,7 +21,7 @@ def get_bits():
     username = request.args.get('user')
     if username == None:
         bits = Bit.objects.to_json()
-        return jsonify({"data": json.loads(bits)})
+        return {"data": json.loads(bits)}
     else:
         user = User.objects.filter(username=username)
         bits = Bit.objects.filter(author=user[0]).to_json()
@@ -39,7 +39,8 @@ def add_bit():
     user = User.objects.filter(username=r_name)
 
     new_bit = Bit(bit=bit)
-    new_bit.author = user[0]
+    new_bit.author = user[0].username
+    new_bit.author_image = user[0].image
 
     try:
         new_bit.save()
